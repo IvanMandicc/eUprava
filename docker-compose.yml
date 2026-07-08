@@ -1,0 +1,133 @@
+services:
+  # ---------------- Baze podataka (jedna po servisu) ----------------
+  citizen-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-euprava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-euprava}
+      POSTGRES_DB: citizen_db
+    volumes:
+      - citizen_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-euprava} -d citizen_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  traffic-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-euprava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-euprava}
+      POSTGRES_DB: traffic_db
+    volumes:
+      - traffic_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-euprava} -d traffic_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  payment-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-euprava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-euprava}
+      POSTGRES_DB: payment_db
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-euprava} -d payment_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-euprava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-euprava}
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-euprava} -d notification_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------- Mikroservisi ----------------
+  citizen-service:
+    build: ./backend/services/citizen
+    environment:
+      PORT: "8081"
+      DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@citizen-db:5432/citizen_db?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-super-tajni-kljuc-promeni-me}
+      OFFICER_EMAIL: ${OFFICER_EMAIL:-policija@euprava.rs}
+      OFFICER_PASSWORD: ${OFFICER_PASSWORD:-policija123}
+    depends_on:
+      citizen-db:
+        condition: service_healthy
+
+  traffic-police-service:
+    build: ./backend/services/traffic-police
+    environment:
+      PORT: "8082"
+      DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@traffic-db:5432/traffic_db?sslmode=disable
+      CITIZEN_SERVICE_URL: http://citizen-service:8081
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+    depends_on:
+      traffic-db:
+        condition: service_healthy
+
+  payment-service:
+    build: ./backend/services/payment
+    environment:
+      PORT: "8083"
+      DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@payment-db:5432/payment_db?sslmode=disable
+      TRAFFIC_SERVICE_URL: http://traffic-police-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+    depends_on:
+      payment-db:
+        condition: service_healthy
+
+  notification-service:
+    build: ./backend/services/notification
+    environment:
+      PORT: "8084"
+      DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@notification-db:5432/notification_db?sslmode=disable
+    depends_on:
+      notification-db:
+        condition: service_healthy
+
+  # ---------------- API Gateway ----------------
+  api-gateway:
+    build: ./backend/api-gateway
+    environment:
+      PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET:-super-tajni-kljuc-promeni-me}
+      CITIZEN_SERVICE_URL: http://citizen-service:8081
+      TRAFFIC_SERVICE_URL: http://traffic-police-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+    depends_on:
+      - citizen-service
+      - traffic-police-service
+      - payment-service
+      - notification-service
+    ports:
+      - "8080:8080"
+
+  # ---------------- Frontend ----------------
+  frontend:
+    build: ./frontend
+    depends_on:
+      - api-gateway
+    ports:
+      - "4200:80"
+
+volumes:
+  citizen_data:
+  traffic_data:
+  payment_data:
+  notification_data:
