@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"euprava/traffic-police/internal/client"
 	"euprava/traffic-police/internal/model"
 	"euprava/traffic-police/internal/repository"
 )
+
+// ErrNotACitizen se vraća kada se kao vozač evidentira službeni nalog.
+var ErrNotACitizen = errors.New("samo građanin može biti evidentiran kao vozač")
 
 // RegisterDriverInput su podaci za evidentiranje vozača.
 type RegisterDriverInput struct {
@@ -25,10 +29,15 @@ func NewDriverService(drivers repository.DriverRepository, citizens client.Citiz
 	return &DriverService{drivers: drivers, citizens: citizens}
 }
 
-// Register evidentira vozača — prvo proverava kod Citizen servisa da građanin postoji.
+// Register evidentira vozača — kod Citizen servisa proverava da građanin
+// postoji I da ima ulogu citizen (službeni nalozi ne mogu biti vozači).
 func (s *DriverService) Register(ctx context.Context, in RegisterDriverInput) (*model.Driver, error) {
-	if _, err := s.citizens.GetCitizen(ctx, in.CitizenID); err != nil {
+	info, err := s.citizens.GetCitizen(ctx, in.CitizenID)
+	if err != nil {
 		return nil, err
+	}
+	if info.Role != "citizen" {
+		return nil, ErrNotACitizen
 	}
 	d := &model.Driver{CitizenID: in.CitizenID, LicenseNumber: in.LicenseNumber}
 	if err := s.drivers.Create(ctx, d); err != nil {
