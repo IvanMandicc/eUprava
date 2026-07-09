@@ -52,6 +52,23 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 	return r.scanOne(r.pool.QueryRow(ctx, selectUser+` WHERE email = $1`, email))
 }
 
+func (r *PostgresUserRepository) List(ctx context.Context) ([]model.User, error) {
+	rows, err := r.pool.Query(ctx, selectUser+` ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	users := []model.User{}
+	for rows.Next() {
+		var u model.User
+		if err := rows.Scan(&u.ID, &u.JMBG, &u.FirstName, &u.LastName, &u.Email, &u.PasswordHash, &u.Role, &u.Address, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
 const selectUser = `SELECT id, jmbg, first_name, last_name, email, password_hash, role, address, created_at FROM users`
 
 func (r *PostgresUserRepository) scanOne(row pgx.Row) (*model.User, error) {

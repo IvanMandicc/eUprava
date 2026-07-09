@@ -8,9 +8,10 @@ type Role string
 const (
 	RoleCitizen Role = "citizen"
 	RoleOfficer Role = "officer"
+	RoleAdmin   Role = "admin"
 )
 
-// User predstavlja građanina ili policajca.
+// User predstavlja građanina, policajca ili administratora.
 type User struct {
 	ID           int64     `json:"id"`
 	JMBG         string    `json:"jmbg"`

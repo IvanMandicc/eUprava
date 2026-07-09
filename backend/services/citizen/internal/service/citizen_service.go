@@ -19,3 +19,8 @@ func NewCitizenService(users repository.UserRepository) *CitizenService {
 func (s *CitizenService) GetByID(ctx context.Context, id int64) (*model.User, error) {
 	return s.users.GetByID(ctx, id)
 }
+
+// ListUsers vraća sve korisnike sistema (koristi ga administrator).
+func (s *CitizenService) ListUsers(ctx context.Context) ([]model.User, error) {
+	return s.users.List(ctx)
+}

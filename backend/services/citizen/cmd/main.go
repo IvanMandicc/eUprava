@@ -36,11 +36,15 @@ func main() {
 	if err := authSvc.SeedOfficer(ctx, getenv("OFFICER_EMAIL", "policija@euprava.rs"), getenv("OFFICER_PASSWORD", "policija123")); err != nil {
 		log.Fatalf("seed policajca: %v", err)
 	}
+	if err := authSvc.SeedAdmin(ctx, getenv("ADMIN_EMAIL", "admin@euprava.rs"), getenv("ADMIN_PASSWORD", "admin123")); err != nil {
+		log.Fatalf("seed administratora: %v", err)
+	}
 
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok", "service": "citizen"}) })
 	handler.NewAuthHandler(authSvc).RegisterRoutes(r)
 	handler.NewCitizenHandler(citizenSvc).RegisterRoutes(r)
+	handler.NewUserHandler(authSvc, citizenSvc).RegisterRoutes(r)
 
 	log.Printf("Citizen servis sluša na :%s", port)
 	if err := r.Run(":" + port); err != nil {
