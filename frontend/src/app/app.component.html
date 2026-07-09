@@ -1,0 +1,33 @@
+<header class="topbar">
+  <span class="brand">eUprava — Saobraćajna policija</span>
+  <nav>
+    <a routerLink="/open-data" routerLinkActive="active">Otvoreni podaci</a>
+    @if (auth.isCitizen()) {
+      <a routerLink="/citizen" routerLinkActive="active">Moj karton</a>
+      <a routerLink="/citizen/notifications" routerLinkActive="active">Obaveštenja</a>
+    }
+    @if (auth.isOfficer()) {
+      <a routerLink="/officer/drivers" routerLinkActive="active">Vozači</a>
+      <a routerLink="/officer/violations" routerLinkActive="active">Prekršaji</a>
+      <a routerLink="/officer/fines" routerLinkActive="active">Kazne</a>
+    }
+    @if (auth.isAdmin()) {
+      <a routerLink="/admin/users" routerLinkActive="active">Korisnici</a>
+    }
+  </nav>
+  @if (auth.isLoggedIn()) {
+    <div class="user-box">
+      <span>{{ auth.user()?.firstName }} {{ auth.user()?.lastName }}</span>
+      <button class="secondary" (click)="auth.logout()">Odjava</button>
+    </div>
+  } @else {
+    <div class="user-box">
+      <a routerLink="/login" routerLinkActive="active">Prijava</a>
+      <a routerLink="/register" routerLinkActive="active">Registracija</a>
+    </div>
+  }
+</header>
+
+<main class="container">
+  <router-outlet />
+</main>
