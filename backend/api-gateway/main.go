@@ -23,6 +23,7 @@ func main() {
 		{Prefix: "/api/users", Target: citizenURL},
 		{Prefix: "/api/drivers", Target: trafficURL},
 		{Prefix: "/api/violation-types", Target: trafficURL},
+		{Prefix: "/api/open-data/", Target: trafficURL},
 		{Prefix: "/api/violations", Target: trafficURL},
 		{Prefix: "/api/fines", Target: trafficURL},
 		{Prefix: "/api/penalty-points", Target: trafficURL},

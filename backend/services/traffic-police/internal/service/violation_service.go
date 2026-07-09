@@ -189,6 +189,11 @@ func (s *ViolationService) PenaltyPoints(ctx context.Context, driverID int64) (*
 	return s.drivers.GetByID(ctx, driverID)
 }
 
+// Stats vraća javnu, anonimnu statistiku prekršaja po tipu (open data).
+func (s *ViolationService) Stats(ctx context.Context) ([]model.ViolationStat, error) {
+	return s.violations.Stats(ctx)
+}
+
 func (s *ViolationService) notify(ctx context.Context, citizenID int64, message, notifType string) {
 	if err := s.notifier.Notify(ctx, citizenID, message, notifType); err != nil {
 		log.Printf("slanje obaveštenja nije uspelo (citizenId=%d): %v", citizenID, err)

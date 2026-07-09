@@ -28,6 +28,7 @@ type ViolationRepository interface {
 	List(ctx context.Context) ([]model.Violation, error)
 	Update(ctx context.Context, v *model.Violation) error
 	Delete(ctx context.Context, id int64) error
+	Stats(ctx context.Context) ([]model.ViolationStat, error)
 }
 
 type FineRepository interface {

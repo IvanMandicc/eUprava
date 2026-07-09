@@ -82,6 +82,16 @@ type FineDetails struct {
 	CitizenID     int64     `json:"citizenId"`
 }
 
+// ViolationStat je agregirana, anonimna statistika prekršaja po tipu —
+// javno dostupan podatak (open data), bez ijednog ličnog podatka.
+type ViolationStat struct {
+	Type        string  `json:"type"`
+	Count       int64   `json:"count"`
+	TotalPoints int64   `json:"totalPoints"`
+	AvgFine     float64 `json:"avgFine"`
+	TotalFines  float64 `json:"totalFines"`
+}
+
 // ViolationTypeInfo opisuje tip prekršaja sa podrazumevanim poenima i iznosom kazne.
 type ViolationTypeInfo struct {
 	Code   string  `json:"code"`

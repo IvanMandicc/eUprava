@@ -25,6 +25,16 @@ func (h *ViolationHandler) RegisterRoutes(r gin.IRouter) {
 	g.PUT("/:id", h.update)
 	g.DELETE("/:id", h.delete)
 	r.GET("/violation-types", h.types)
+	// Open data: javna, anonimna statistika — gateway je pušta bez tokena.
+	r.GET("/open-data/violation-stats", h.stats)
+}
+
+func (h *ViolationHandler) stats(c *gin.Context) {
+	stats, err := h.violations.Stats(c.Request.Context())
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(http.StatusOK, stats)
 }
 
 func (h *ViolationHandler) list(c *gin.Context) {

@@ -166,6 +166,27 @@ func (r *PostgresViolationRepository) list(ctx context.Context, query string, ar
 	return violations, rows.Err()
 }
 
+// Stats vraća anonimnu agregiranu statistiku prekršaja po tipu (open data).
+func (r *PostgresViolationRepository) Stats(ctx context.Context) ([]model.ViolationStat, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT type, COUNT(*), COALESCE(SUM(points), 0),
+		        COALESCE(AVG(fine_amount), 0), COALESCE(SUM(fine_amount), 0)
+		 FROM violations GROUP BY type ORDER BY COUNT(*) DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	stats := []model.ViolationStat{}
+	for rows.Next() {
+		var s model.ViolationStat
+		if err := rows.Scan(&s.Type, &s.Count, &s.TotalPoints, &s.AvgFine, &s.TotalFines); err != nil {
+			return nil, err
+		}
+		stats = append(stats, s)
+	}
+	return stats, rows.Err()
+}
+
 func (r *PostgresViolationRepository) Update(ctx context.Context, v *model.Violation) error {
 	tag, err := r.pool.Exec(ctx,
 		`UPDATE violations SET description = $2, location = $3, status = $4 WHERE id = $1`,

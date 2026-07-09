@@ -25,7 +25,7 @@ func (a *Auth) Middleware(next http.Handler) http.Handler {
 		r.Header.Del("X-User-Id")
 		r.Header.Del("X-User-Role")
 
-		if strings.HasPrefix(r.URL.Path, "/api/auth/") || r.URL.Path == "/health" {
+		if IsPublic(r.Method, r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}

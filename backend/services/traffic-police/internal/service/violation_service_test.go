@@ -87,6 +87,10 @@ func (m *mockViolationRepo) ListByDriver(_ context.Context, driverID int64) ([]m
 
 func (m *mockViolationRepo) List(_ context.Context) ([]model.Violation, error) { return nil, nil }
 
+func (m *mockViolationRepo) Stats(_ context.Context) ([]model.ViolationStat, error) {
+	return nil, nil
+}
+
 func (m *mockViolationRepo) Update(_ context.Context, v *model.Violation) error {
 	if _, ok := m.violations[v.ID]; !ok {
 		return repository.ErrNotFound

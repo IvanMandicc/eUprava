@@ -16,7 +16,7 @@ import (
 //   - /api/me/*                                           → svaki ulogovan korisnik (svoji podaci)
 func Roles(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/auth/") || r.URL.Path == "/health" {
+		if IsPublic(r.Method, r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
