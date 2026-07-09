@@ -34,6 +34,10 @@ func allowed(method, path, role string) bool {
 	case strings.HasPrefix(path, "/api/me/"), path == "/api/citizens/me":
 		return true // sopstveni podaci
 
+	case strings.HasPrefix(path, "/api/users"):
+		// Upravljanje korisnicima (pregled, kreiranje policajaca) — samo administrator.
+		return role == "admin"
+
 	case strings.HasPrefix(path, "/api/drivers"),
 		strings.HasPrefix(path, "/api/violations"),
 		strings.HasPrefix(path, "/api/penalty-points"),

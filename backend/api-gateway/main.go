@@ -20,6 +20,7 @@ func main() {
 	routes := []proxy.Route{
 		{Prefix: "/api/auth/", Target: citizenURL},
 		{Prefix: "/api/citizens", Target: citizenURL},
+		{Prefix: "/api/users", Target: citizenURL},
 		{Prefix: "/api/drivers", Target: trafficURL},
 		{Prefix: "/api/violation-types", Target: trafficURL},
 		{Prefix: "/api/violations", Target: trafficURL},
