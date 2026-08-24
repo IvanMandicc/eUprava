@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -166,12 +169,28 @@ func (r *PostgresViolationRepository) list(ctx context.Context, query string, ar
 	return violations, rows.Err()
 }
 
-// Stats vraća anonimnu agregiranu statistiku prekršaja po tipu (open data).
-func (r *PostgresViolationRepository) Stats(ctx context.Context) ([]model.ViolationStat, error) {
-	rows, err := r.pool.Query(ctx,
-		`SELECT type, COUNT(*), COALESCE(SUM(points), 0),
-		        COALESCE(AVG(fine_amount), 0), COALESCE(SUM(fine_amount), 0)
-		 FROM violations GROUP BY type ORDER BY COUNT(*) DESC`)
+// Stats vraća anonimnu agregiranu statistiku prekršaja po tipu (open data),
+// opciono filtriranu po datumu prekršaja (from/to su inkluzivno/ekskluzivno).
+func (r *PostgresViolationRepository) Stats(ctx context.Context, from, to *time.Time) ([]model.ViolationStat, error) {
+	query := `SELECT type, COUNT(*), COALESCE(SUM(points), 0),
+	        COALESCE(AVG(fine_amount), 0), COALESCE(SUM(fine_amount), 0)
+	 FROM violations`
+	var args []any
+	var conditions []string
+	if from != nil {
+		args = append(args, *from)
+		conditions = append(conditions, fmt.Sprintf("date >= $%d", len(args)))
+	}
+	if to != nil {
+		args = append(args, *to)
+		conditions = append(conditions, fmt.Sprintf("date < $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query += " GROUP BY type ORDER BY COUNT(*) DESC"
+
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

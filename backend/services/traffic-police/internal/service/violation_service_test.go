@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"euprava/traffic-police/internal/model"
 	"euprava/traffic-police/internal/repository"
@@ -87,7 +88,7 @@ func (m *mockViolationRepo) ListByDriver(_ context.Context, driverID int64) ([]m
 
 func (m *mockViolationRepo) List(_ context.Context) ([]model.Violation, error) { return nil, nil }
 
-func (m *mockViolationRepo) Stats(_ context.Context) ([]model.ViolationStat, error) {
+func (m *mockViolationRepo) Stats(_ context.Context, _, _ *time.Time) ([]model.ViolationStat, error) {
 	return nil, nil
 }
 
