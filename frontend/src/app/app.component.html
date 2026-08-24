@@ -4,7 +4,12 @@
     <a routerLink="/open-data" routerLinkActive="active">Otvoreni podaci</a>
     @if (auth.isCitizen()) {
       <a routerLink="/citizen" routerLinkActive="active">Moj karton</a>
-      <a routerLink="/citizen/notifications" routerLinkActive="active">Obaveštenja</a>
+      <a routerLink="/citizen/notifications" routerLinkActive="active" class="nav-link-badge">
+        Obaveštenja
+        @if (badge.unreadCount() > 0) {
+          <span class="notif-badge">{{ badge.unreadCount() }}</span>
+        }
+      </a>
     }
     @if (auth.isOfficer()) {
       <a routerLink="/officer/drivers" routerLinkActive="active">Vozači</a>
