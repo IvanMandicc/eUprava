@@ -52,6 +52,10 @@ func (r *PostgresUserRepository) GetByEmail(ctx context.Context, email string) (
 	return r.scanOne(r.pool.QueryRow(ctx, selectUser+` WHERE email = $1`, email))
 }
 
+func (r *PostgresUserRepository) GetByJMBG(ctx context.Context, jmbg string) (*model.User, error) {
+	return r.scanOne(r.pool.QueryRow(ctx, selectUser+` WHERE jmbg = $1`, jmbg))
+}
+
 func (r *PostgresUserRepository) List(ctx context.Context) ([]model.User, error) {
 	rows, err := r.pool.Query(ctx, selectUser+` ORDER BY id`)
 	if err != nil {

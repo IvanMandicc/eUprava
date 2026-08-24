@@ -23,7 +23,28 @@ func NewCitizenHandler(citizens *service.CitizenService) *CitizenHandler {
 func (h *CitizenHandler) RegisterRoutes(r gin.IRouter) {
 	g := r.Group("/citizens")
 	g.GET("/me", h.me)
+	g.GET("/search", h.search)
 	g.GET("/:id", h.getByID)
+}
+
+// search pronalazi građanina po JMBG-u (?jmbg=...) — koristi ga policajac
+// pri evidentiranju vozača, umesto unosa internog ID-ja iz baze.
+func (h *CitizenHandler) search(c *gin.Context) {
+	jmbg := c.Query("jmbg")
+	if len(jmbg) != 13 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "JMBG mora imati tačno 13 cifara"})
+		return
+	}
+	u, err := h.citizens.SearchByJMBG(c.Request.Context(), jmbg)
+	if errors.Is(err, repository.ErrNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "građanin sa unetim JMBG-om nije pronađen"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, u)
 }
 
 // me vraća profil ulogovanog korisnika; gateway prosleđuje X-User-Id header.
