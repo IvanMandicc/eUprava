@@ -26,6 +26,16 @@ func (s *CitizenService) SearchByJMBG(ctx context.Context, jmbg string) (*model.
 	return s.users.GetByJMBG(ctx, jmbg)
 }
 
+// jmbgSuggestionLimit ograničava broj predloga u autocomplete listi.
+const jmbgSuggestionLimit = 8
+
+// SuggestByJMBGPrefix vraća do nekoliko građana čiji JMBG počinje unetim
+// prefiksom — puni padajuću listu dok policajac kuca, bez čekanja na
+// ceo broj.
+func (s *CitizenService) SuggestByJMBGPrefix(ctx context.Context, prefix string) ([]model.User, error) {
+	return s.users.SuggestByJMBGPrefix(ctx, prefix, jmbgSuggestionLimit)
+}
+
 // ListUsers vraća sve korisnike sistema (koristi ga administrator).
 func (s *CitizenService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return s.users.List(ctx)

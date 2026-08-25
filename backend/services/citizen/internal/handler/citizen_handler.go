@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"euprava/citizen/internal/model"
 	"euprava/citizen/internal/repository"
 	"euprava/citizen/internal/service"
 )
@@ -24,7 +25,24 @@ func (h *CitizenHandler) RegisterRoutes(r gin.IRouter) {
 	g := r.Group("/citizens")
 	g.GET("/me", h.me)
 	g.GET("/search", h.search)
+	g.GET("/suggest", h.suggest)
 	g.GET("/:id", h.getByID)
+}
+
+// suggest vraća do nekoliko građana čiji JMBG počinje datim prefiksom
+// (?jmbg=<delimičan broj>) — autocomplete dok policajac kuca.
+func (h *CitizenHandler) suggest(c *gin.Context) {
+	prefix := c.Query("jmbg")
+	if len(prefix) < 3 {
+		c.JSON(http.StatusOK, []model.User{})
+		return
+	}
+	users, err := h.citizens.SuggestByJMBGPrefix(c.Request.Context(), prefix)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, users)
 }
 
 // search pronalazi građanina po JMBG-u (?jmbg=...) — koristi ga policajac

@@ -17,5 +17,6 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
 	GetByJMBG(ctx context.Context, jmbg string) (*model.User, error)
+	SuggestByJMBGPrefix(ctx context.Context, prefix string, limit int) ([]model.User, error)
 	List(ctx context.Context) ([]model.User, error)
 }

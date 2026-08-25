@@ -56,6 +56,27 @@ func (r *PostgresUserRepository) GetByJMBG(ctx context.Context, jmbg string) (*m
 	return r.scanOne(r.pool.QueryRow(ctx, selectUser+` WHERE jmbg = $1`, jmbg))
 }
 
+// SuggestByJMBGPrefix vraća građane čiji JMBG počinje datim prefiksom —
+// koristi se za autocomplete pri unosu (bez čekanja celog broja).
+func (r *PostgresUserRepository) SuggestByJMBGPrefix(ctx context.Context, prefix string, limit int) ([]model.User, error) {
+	rows, err := r.pool.Query(ctx,
+		selectUser+` WHERE role = 'citizen' AND jmbg LIKE $1 ORDER BY jmbg LIMIT $2`,
+		prefix+"%", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	users := []model.User{}
+	for rows.Next() {
+		var u model.User
+		if err := rows.Scan(&u.ID, &u.JMBG, &u.FirstName, &u.LastName, &u.Email, &u.PasswordHash, &u.Role, &u.Address, &u.CreatedAt); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
 func (r *PostgresUserRepository) List(ctx context.Context) ([]model.User, error) {
 	rows, err := r.pool.Query(ctx, selectUser+` ORDER BY id`)
 	if err != nil {
