@@ -31,6 +31,17 @@ type Driver struct {
 	LicenseStatus LicenseStatus `json:"licenseStatus"`
 }
 
+// VehicleOwnerInfo su podaci o vlasniku vozila dobijeni od Vehicles servisa
+// po registarskoj tablici — koristi se kad prekršaj snimi kamera i zna se
+// samo tablica, ne i vozač.
+type VehicleOwnerInfo struct {
+	OwnerCitizenID int64  `json:"ownerCitizenId"`
+	PlateNumber    string `json:"plateNumber"`
+	VIN            string `json:"vin"`
+	Make           string `json:"make"`
+	Model          string `json:"model"`
+}
+
 // CitizenInfo su podaci o građaninu dobijeni od Citizen servisa.
 type CitizenInfo struct {
 	ID        int64  `json:"id"`

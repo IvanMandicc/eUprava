@@ -109,9 +109,9 @@ func respondErr(c *gin.Context, err error) bool {
 	switch {
 	case err == nil:
 		return false
-	case errors.Is(err, repository.ErrNotFound):
-		c.JSON(http.StatusNotFound, gin.H{"error": "zapis nije pronađen"})
-	case errors.Is(err, service.ErrUnknownViolationType), errors.Is(err, service.ErrFinePaid):
+	case errors.Is(err, repository.ErrNotFound), errors.Is(err, service.ErrVehicleNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, service.ErrUnknownViolationType), errors.Is(err, service.ErrFinePaid), errors.Is(err, service.ErrOwnerNotRegistered):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

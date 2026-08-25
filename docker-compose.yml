@@ -92,6 +92,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@traffic-db:5432/traffic_db?sslmode=disable
       CITIZEN_SERVICE_URL: http://citizen-service:8081
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      VEHICLES_SERVICE_URL: http://vehicles-service:8085
     depends_on:
       traffic-db:
         condition: service_healthy

@@ -15,6 +15,8 @@ import (
 var (
 	ErrUnknownViolationType = errors.New("nepoznat tip prekršaja")
 	ErrFinePaid             = errors.New("prekršaj sa plaćenom kaznom ne može da se obriše")
+	ErrOwnerNotRegistered   = errors.New("vlasnik vozila nije evidentiran kao vozač")
+	ErrVehicleNotFound      = errors.New("vozilo sa unetom tablicom ne postoji")
 )
 
 // finePaymentDeadline je rok za plaćanje kazne od dana prekršaja.
@@ -23,6 +25,16 @@ const finePaymentDeadline = 15 * 24 * time.Hour
 // CreateViolationInput su podaci za unos novog prekršaja.
 type CreateViolationInput struct {
 	DriverID    int64     `json:"driverId" binding:"required"`
+	Type        string    `json:"type" binding:"required"`
+	Description string    `json:"description"`
+	Location    string    `json:"location"`
+	Date        time.Time `json:"date"`
+}
+
+// CreateViolationByPlateInput su podaci za prekršaj snimljen kamerom —
+// zna se samo registarska tablica, ne i vozač.
+type CreateViolationByPlateInput struct {
+	PlateNumber string    `json:"plateNumber" binding:"required"`
 	Type        string    `json:"type" binding:"required"`
 	Description string    `json:"description"`
 	Location    string    `json:"location"`
@@ -44,6 +56,7 @@ type ViolationService struct {
 	violations repository.ViolationRepository
 	fines      repository.FineRepository
 	notifier   client.NotificationClient
+	vehicles   client.VehiclesClient
 }
 
 func NewViolationService(
@@ -51,8 +64,9 @@ func NewViolationService(
 	violations repository.ViolationRepository,
 	fines repository.FineRepository,
 	notifier client.NotificationClient,
+	vehicles client.VehiclesClient,
 ) *ViolationService {
-	return &ViolationService{drivers: drivers, violations: violations, fines: fines, notifier: notifier}
+	return &ViolationService{drivers: drivers, violations: violations, fines: fines, notifier: notifier, vehicles: vehicles}
 }
 
 // Create evidentira prekršaj i sprovodi sva poslovna pravila.
@@ -116,6 +130,37 @@ func (s *ViolationService) Create(ctx context.Context, in CreateViolationInput) 
 			"LICENSE_SUSPENDED")
 	}
 	return v, nil
+}
+
+// CreateByPlate evidentira prekršaj snimljen kamerom, gde se zna samo
+// registarska tablica. Prvo pronalazi vlasnika vozila preko Vehicles
+// servisa, pa proverava da li je taj građanin evidentiran kao vozač u
+// našem sistemu — ako nije, prekršaj se ne može uneti (isto pravilo kao i
+// za ručni unos: samo evidentiran vozač može dobiti prekršaj). Ako sve
+// prođe, delegira na Create() i time deli sva ista poslovna pravila
+// (automatska kazna, poeni, obaveštenja).
+func (s *ViolationService) CreateByPlate(ctx context.Context, in CreateViolationByPlateInput) (*model.Violation, error) {
+	owner, err := s.vehicles.OwnerByPlate(ctx, in.PlateNumber)
+	if errors.Is(err, client.ErrVehicleNotFound) {
+		return nil, ErrVehicleNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	driver, err := s.drivers.GetByCitizenID(ctx, owner.OwnerCitizenID)
+	if errors.Is(err, repository.ErrNotFound) {
+		return nil, ErrOwnerNotRegistered
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.Create(ctx, CreateViolationInput{
+		DriverID:    driver.ID,
+		Type:        in.Type,
+		Description: in.Description,
+		Location:    in.Location,
+		Date:        in.Date,
+	})
 }
 
 // Update menja opis, lokaciju ili status prekršaja.

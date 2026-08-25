@@ -21,6 +21,7 @@ func main() {
 	dbURL := getenv("DATABASE_URL", "postgres://euprava:euprava@localhost:5434/traffic_db?sslmode=disable")
 	citizenURL := getenv("CITIZEN_SERVICE_URL", "http://localhost:8081")
 	notificationURL := getenv("NOTIFICATION_SERVICE_URL", "http://localhost:8084")
+	vehiclesURL := getenv("VEHICLES_SERVICE_URL", "http://localhost:8085")
 
 	ctx := context.Background()
 	pool := mustConnect(ctx, dbURL)
@@ -35,9 +36,10 @@ func main() {
 	fines := repository.NewPostgresFineRepository(pool)
 	citizens := client.NewHTTPCitizenClient(citizenURL)
 	notifier := client.NewHTTPNotificationClient(notificationURL)
+	vehicles := client.NewHTTPVehiclesClient(vehiclesURL)
 
 	driverSvc := service.NewDriverService(drivers, citizens)
-	violationSvc := service.NewViolationService(drivers, violations, fines, notifier)
+	violationSvc := service.NewViolationService(drivers, violations, fines, notifier, vehicles)
 	fineSvc := service.NewFineService(fines, violations, notifier)
 
 	r := gin.Default()

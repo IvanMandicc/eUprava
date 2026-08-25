@@ -30,6 +30,10 @@ func (h *VehicleHandler) RegisterRoutes(r gin.IRouter) {
 	g.POST("/:id/report-theft", h.reportTheft)
 	g.POST("/:id/report-found", h.reportFound)
 	r.GET("/vehicle-status/:plate", h.plateStatus)
+	// owner-by-plate je za razliku od vehicle-status namenjen policajcu (ne
+	// javnosti) — koristi ga Traffic Police servis kad prekršaj snimi kamera
+	// i zna se samo registarska tablica, ne i vozač.
+	g.GET("/owner-by-plate/:plate", h.ownerByPlate)
 }
 
 func (h *VehicleHandler) list(c *gin.Context) {
@@ -140,6 +144,24 @@ func (h *VehicleHandler) plateStatus(c *gin.Context) {
 		"registrationValidUntil": v.RegistrationValidUntil,
 		"make":                   v.Make,
 		"model":                  v.Model,
+	})
+}
+
+// ownerByPlate vraća vlasnika vozila po tablici — za razliku od plateStatus
+// (javna, anonimna provera) ovo je interna/policijska ruta koja otkriva
+// identitet vlasnika (citizenId), pa je dostupna samo službeniku.
+func (h *VehicleHandler) ownerByPlate(c *gin.Context) {
+	plate := c.Param("plate")
+	v, err := h.vehicles.GetByPlate(c.Request.Context(), plate)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"ownerCitizenId": v.OwnerCitizenID,
+		"plateNumber":    v.PlateNumber,
+		"vin":            v.VIN,
+		"make":           v.Make,
+		"model":          v.Model,
 	})
 }
 

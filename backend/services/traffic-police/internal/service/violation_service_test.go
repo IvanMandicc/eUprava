@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"euprava/traffic-police/internal/client"
 	"euprava/traffic-police/internal/model"
 	"euprava/traffic-police/internal/repository"
 )
@@ -175,16 +176,35 @@ func (m *mockNotifier) Notify(_ context.Context, _ int64, message, _ string) err
 	return nil
 }
 
+// mockVehiclesClient simulira Vehicles servis — mapira tablicu na vlasnika.
+type mockVehiclesClient struct {
+	ownersByPlate map[string]int64
+}
+
+func (m *mockVehiclesClient) OwnerByPlate(_ context.Context, plate string) (*model.VehicleOwnerInfo, error) {
+	citizenID, ok := m.ownersByPlate[plate]
+	if !ok {
+		return nil, client.ErrVehicleNotFound
+	}
+	return &model.VehicleOwnerInfo{OwnerCitizenID: citizenID, PlateNumber: plate}, nil
+}
+
 // ---------------- pomoćna funkcija ----------------
 
 func newTestService() (*ViolationService, *mockDriverRepo, *mockFineRepo, *mockNotifier) {
+	svc, drivers, fines, notifier, _ := newTestServiceWithVehicles()
+	return svc, drivers, fines, notifier
+}
+
+func newTestServiceWithVehicles() (*ViolationService, *mockDriverRepo, *mockFineRepo, *mockNotifier, *mockVehiclesClient) {
 	drivers := &mockDriverRepo{drivers: map[int64]*model.Driver{
 		1: {ID: 1, CitizenID: 10, LicenseNumber: "B-12345", PenaltyPoints: 0, LicenseStatus: model.LicenseValid},
 	}}
 	violations := &mockViolationRepo{violations: map[int64]*model.Violation{}}
 	fines := &mockFineRepo{fines: map[int64]*model.Fine{}}
 	notifier := &mockNotifier{}
-	return NewViolationService(drivers, violations, fines, notifier), drivers, fines, notifier
+	vehicles := &mockVehiclesClient{ownersByPlate: map[string]int64{"NS-001-AA": 10}}
+	return NewViolationService(drivers, violations, fines, notifier, vehicles), drivers, fines, notifier, vehicles
 }
 
 // ---------------- testovi poslovnih pravila ----------------
@@ -230,6 +250,46 @@ func TestLicenseSuspendedAtPointLimit(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("očekivano obaveštenje o suspenziji, dobijeno: %v", notifier.messages)
+	}
+}
+
+func TestCreateByPlateFindsOwnerAndCreatesViolation(t *testing.T) {
+	svc, drivers, _, _, _ := newTestServiceWithVehicles()
+
+	v, err := svc.CreateByPlate(context.Background(), CreateViolationByPlateInput{
+		PlateNumber: "NS-001-AA", Type: "SPEEDING", Location: "Autoput",
+	})
+	if err != nil {
+		t.Fatalf("CreateByPlate: %v", err)
+	}
+	if v.DriverID != 1 {
+		t.Errorf("očekivan vozač 1 (vlasnik tablice), dobijeno driverId=%d", v.DriverID)
+	}
+	if drivers.drivers[1].PenaltyPoints != 6 {
+		t.Errorf("vozač treba da ima 6 poena posle prekršaja preko tablice, ima %d", drivers.drivers[1].PenaltyPoints)
+	}
+}
+
+func TestCreateByPlateRejectsUnregisteredOwner(t *testing.T) {
+	svc, _, _, _, vehicles := newTestServiceWithVehicles()
+	vehicles.ownersByPlate["ZR-999-ZZ"] = 999 // vlasnik postoji, ali nije evidentiran kao vozač
+
+	_, err := svc.CreateByPlate(context.Background(), CreateViolationByPlateInput{
+		PlateNumber: "ZR-999-ZZ", Type: "SPEEDING",
+	})
+	if err != ErrOwnerNotRegistered {
+		t.Errorf("očekivana greška ErrOwnerNotRegistered, dobijeno: %v", err)
+	}
+}
+
+func TestCreateByPlateRejectsUnknownPlate(t *testing.T) {
+	svc, _, _, _, _ := newTestServiceWithVehicles()
+
+	_, err := svc.CreateByPlate(context.Background(), CreateViolationByPlateInput{
+		PlateNumber: "NEPOSTOJECA", Type: "SPEEDING",
+	})
+	if err == nil {
+		t.Error("očekivana greška za nepostojeću tablicu")
 	}
 }
 

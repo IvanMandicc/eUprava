@@ -23,6 +23,7 @@ func (h *ViolationHandler) RegisterRoutes(r gin.IRouter) {
 	g := r.Group("/violations")
 	g.GET("", h.list)
 	g.POST("", h.create)
+	g.POST("/by-plate", h.createByPlate)
 	g.PUT("/:id", h.update)
 	g.DELETE("/:id", h.delete)
 	r.GET("/violation-types", h.types)
@@ -81,6 +82,22 @@ func (h *ViolationHandler) create(c *gin.Context) {
 		return
 	}
 	v, err := h.violations.Create(c.Request.Context(), in)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(http.StatusCreated, v)
+}
+
+// createByPlate evidentira prekršaj snimljen kamerom — zna se samo tablica.
+// Traffic Police servis prvo pita Vehicles servis ko je vlasnik vozila
+// (drugi, samostalan smer komunikacije naspram Vehicles → Traffic Police).
+func (h *ViolationHandler) createByPlate(c *gin.Context) {
+	var in service.CreateViolationByPlateInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "neispravni podaci: " + err.Error()})
+		return
+	}
+	v, err := h.violations.CreateByPlate(c.Request.Context(), in)
 	if respondErr(c, err) {
 		return
 	}
