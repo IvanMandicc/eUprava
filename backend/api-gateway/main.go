@@ -16,6 +16,7 @@ func main() {
 	trafficURL := getenv("TRAFFIC_SERVICE_URL", "http://localhost:8082")
 	paymentURL := getenv("PAYMENT_SERVICE_URL", "http://localhost:8083")
 	notificationURL := getenv("NOTIFICATION_SERVICE_URL", "http://localhost:8084")
+	vehiclesURL := getenv("VEHICLES_SERVICE_URL", "http://localhost:8085")
 
 	routes := []proxy.Route{
 		{Prefix: "/api/auth/", Target: citizenURL},
@@ -27,9 +28,20 @@ func main() {
 		{Prefix: "/api/violations", Target: trafficURL},
 		{Prefix: "/api/fines", Target: trafficURL},
 		{Prefix: "/api/penalty-points", Target: trafficURL},
-		{Prefix: "/api/me/", Target: trafficURL},
 		{Prefix: "/api/payments", Target: paymentURL},
 		{Prefix: "/api/notifications", Target: notificationURL},
+		// MUP-vozila: registar vozila, personalizovane tablice i javna
+		// verifikacija izveštaja — peti mikroservis u sistemu.
+		{Prefix: "/api/vehicles", Target: vehiclesURL},
+		{Prefix: "/api/vehicle-status/", Target: vehiclesURL},
+		{Prefix: "/api/plate-reservations", Target: vehiclesURL},
+		{Prefix: "/api/reports/", Target: vehiclesURL},
+		// /api/me/ rute idu ka oba servisa: /me/driver,violations,fines →
+		// Traffic Police; /me/vehicles,plate-reservations → Vehicles.
+		// Redosled je bitan — proxy.New bira prvi prefiks koji se poklapa.
+		{Prefix: "/api/me/vehicles", Target: vehiclesURL},
+		{Prefix: "/api/me/plate-reservations", Target: vehiclesURL},
+		{Prefix: "/api/me/", Target: trafficURL},
 	}
 
 	p, err := proxy.New(routes)

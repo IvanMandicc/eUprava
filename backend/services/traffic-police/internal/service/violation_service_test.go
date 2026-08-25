@@ -161,6 +161,10 @@ func (m *mockFineRepo) DeleteByViolationID(_ context.Context, violationID int64)
 	return nil
 }
 
+func (m *mockFineRepo) UnpaidSummaryByCitizen(_ context.Context, _ int64) (*model.UnpaidFinesSummary, error) {
+	return &model.UnpaidFinesSummary{}, nil
+}
+
 type mockNotifier struct {
 	messages []string
 }

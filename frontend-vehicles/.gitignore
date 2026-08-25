@@ -1,0 +1,18 @@
+# Compiled output
+/dist
+
+# Node
+/node_modules
+npm-debug.log
+
+# IDEs and editors
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# System files
+.DS_Store
+Thumbs.db

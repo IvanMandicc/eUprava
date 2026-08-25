@@ -22,6 +22,7 @@ func (h *FineHandler) RegisterRoutes(r gin.IRouter) {
 	g.GET("", h.list)
 	g.GET("/:id", h.get)
 	g.PUT("/:id/pay", h.pay)
+	r.GET("/fines/citizen/:citizenId/unpaid-summary", h.unpaidSummary)
 }
 
 func (h *FineHandler) list(c *gin.Context) {
@@ -56,4 +57,19 @@ func (h *FineHandler) pay(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, fd)
+}
+
+// unpaidSummary je interni endpoint — poziva ga Vehicles servis pre prenosa
+// vlasništva ili produženja registracije da proveri neplaćene kazne
+// vlasnika (gateway spolja ne izlaže ovu rutu).
+func (h *FineHandler) unpaidSummary(c *gin.Context) {
+	citizenID, ok := paramID(c, "citizenId")
+	if !ok {
+		return
+	}
+	summary, err := h.fines.UnpaidSummary(c.Request.Context(), citizenID)
+	if respondErr(c, err) {
+		return
+	}
+	c.JSON(http.StatusOK, summary)
 }

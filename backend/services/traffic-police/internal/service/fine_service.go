@@ -33,6 +33,12 @@ func (s *FineService) ListByCitizen(ctx context.Context, citizenID int64) ([]mod
 	return s.fines.ListByCitizen(ctx, citizenID)
 }
 
+// UnpaidSummary vraća zbirni pregled neplaćenih kazni građanina — poziva ga
+// Vehicles servis pre prenosa vlasništva ili produženja registracije.
+func (s *FineService) UnpaidSummary(ctx context.Context, citizenID int64) (*model.UnpaidFinesSummary, error) {
+	return s.fines.UnpaidSummaryByCitizen(ctx, citizenID)
+}
+
 // Pay evidentira plaćanje kazne (poziva ga Payment servis): kazna postaje
 // plaćena, prekršaj rešen, a građanin dobija potvrdu.
 func (s *FineService) Pay(ctx context.Context, id int64) (*model.FineDetails, error) {

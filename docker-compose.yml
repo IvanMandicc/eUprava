@@ -56,6 +56,20 @@ services:
       timeout: 3s
       retries: 10
 
+  vehicle-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-euprava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-euprava}
+      POSTGRES_DB: vehicle_db
+    volumes:
+      - vehicle_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-euprava} -d vehicle_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   # ---------------- Mikroservisi ----------------
   citizen-service:
     build: ./backend/services/citizen
@@ -102,6 +116,18 @@ services:
       notification-db:
         condition: service_healthy
 
+  vehicles-service:
+    build: ./backend/services/vehicles
+    environment:
+      PORT: "8085"
+      DATABASE_URL: postgres://${POSTGRES_USER:-euprava}:${POSTGRES_PASSWORD:-euprava}@vehicle-db:5432/vehicle_db?sslmode=disable
+      CITIZEN_SERVICE_URL: http://citizen-service:8081
+      TRAFFIC_SERVICE_URL: http://traffic-police-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8084
+    depends_on:
+      vehicle-db:
+        condition: service_healthy
+
   # ---------------- API Gateway ----------------
   api-gateway:
     build: ./backend/api-gateway
@@ -112,11 +138,13 @@ services:
       TRAFFIC_SERVICE_URL: http://traffic-police-service:8082
       PAYMENT_SERVICE_URL: http://payment-service:8083
       NOTIFICATION_SERVICE_URL: http://notification-service:8084
+      VEHICLES_SERVICE_URL: http://vehicles-service:8085
     depends_on:
       - citizen-service
       - traffic-police-service
       - payment-service
       - notification-service
+      - vehicles-service
     ports:
       - "8080:8080"
 
@@ -128,8 +156,16 @@ services:
     ports:
       - "4200:80"
 
+  frontend-vehicles:
+    build: ./frontend-vehicles
+    depends_on:
+      - api-gateway
+    ports:
+      - "4201:80"
+
 volumes:
   citizen_data:
   traffic_data:
   payment_data:
   notification_data:
+  vehicle_data:

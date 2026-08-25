@@ -284,6 +284,24 @@ func (r *PostgresFineRepository) MarkPaid(ctx context.Context, id int64) error {
 	return err
 }
 
+// UnpaidSummaryByCitizen vraća broj i ukupan iznos neplaćenih kazni
+// građanina — interni endpoint za Vehicles servis (nije izložen kroz
+// gateway, isti obrazac kao MarkPaid koji poziva Payment servis).
+func (r *PostgresFineRepository) UnpaidSummaryByCitizen(ctx context.Context, citizenID int64) (*model.UnpaidFinesSummary, error) {
+	var summary model.UnpaidFinesSummary
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*), COALESCE(SUM(f.amount), 0)
+		 FROM fines f
+		 JOIN violations v ON v.id = f.violation_id
+		 JOIN drivers d ON d.id = v.driver_id
+		 WHERE d.citizen_id = $1 AND f.paid = FALSE`, citizenID,
+	).Scan(&summary.UnpaidCount, &summary.UnpaidTotal)
+	if err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}
+
 func (r *PostgresFineRepository) DeleteByViolationID(ctx context.Context, violationID int64) error {
 	_, err := r.pool.Exec(ctx, `DELETE FROM fines WHERE violation_id = $1`, violationID)
 	return err

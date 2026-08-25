@@ -82,6 +82,15 @@ type FineDetails struct {
 	CitizenID     int64     `json:"citizenId"`
 }
 
+// UnpaidFinesSummary je zbirni pregled neplaćenih kazni građanina — koristi
+// ga Vehicles servis (interna razmena podataka, van gateway-a) da proveri
+// da li vlasnik vozila ima blokirajuće neplaćene kazne pre prenosa
+// vlasništva ili produženja registracije.
+type UnpaidFinesSummary struct {
+	UnpaidCount int     `json:"unpaidCount"`
+	UnpaidTotal float64 `json:"unpaidTotal"`
+}
+
 // ViolationStat je agregirana, anonimna statistika prekršaja po tipu —
 // javno dostupan podatak (open data), bez ijednog ličnog podatka.
 type ViolationStat struct {

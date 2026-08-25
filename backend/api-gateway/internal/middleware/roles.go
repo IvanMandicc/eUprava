@@ -14,6 +14,10 @@ import (
 //   - /api/payments                                       → samo građanin
 //   - /api/notifications POST                             → interno (blokirano spolja)
 //   - /api/me/*                                           → svaki ulogovan korisnik (svoji podaci)
+//   - /api/vehicles (registracija/transfer/produženje)     → samo službenik MUP-a (uloga officer)
+//   - /api/vehicles/{id}/report-theft|report-found|reports → vlasnik (citizen) ili službenik
+//   - /api/vehicle-status/{plate}                          → samo službenik
+//   - /api/plate-reservations POST (zahtev)                → građanin; GET/PUT (obrada) → službenik
 func Roles(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if IsPublic(r.Method, r.URL.Path) {
@@ -55,6 +59,25 @@ func allowed(method, path, role string) bool {
 	case strings.HasPrefix(path, "/api/notifications"):
 		// Kreiranje obaveštenja je interno (servis → servis); spolja samo čitanje i označavanje.
 		return method != http.MethodPost
+
+	case strings.HasPrefix(path, "/api/vehicles"):
+		// Prijava krađe/pronalaska i generisanje sopstvenog izveštaja može i
+		// vlasnik vozila; registraciju, prenos i produženje obrađuje službenik.
+		if strings.HasSuffix(path, "/report-theft") || strings.HasSuffix(path, "/report-found") || strings.HasSuffix(path, "/reports") {
+			return role == "citizen" || role == "officer"
+		}
+		return role == "officer"
+
+	case strings.HasPrefix(path, "/api/vehicle-status/"):
+		return role == "officer"
+
+	case strings.HasPrefix(path, "/api/plate-reservations"):
+		// Zahtev za tablicu podnosi građanin; pregled reda čekanja i
+		// odobravanje/odbijanje obrađuje službenik.
+		if method == http.MethodPost {
+			return role == "citizen"
+		}
+		return role == "officer"
 
 	default:
 		return true

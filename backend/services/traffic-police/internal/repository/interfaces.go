@@ -39,4 +39,5 @@ type FineRepository interface {
 	ListByCitizen(ctx context.Context, citizenID int64) ([]model.FineDetails, error)
 	MarkPaid(ctx context.Context, id int64) error
 	DeleteByViolationID(ctx context.Context, violationID int64) error
+	UnpaidSummaryByCitizen(ctx context.Context, citizenID int64) (*model.UnpaidFinesSummary, error)
 }
