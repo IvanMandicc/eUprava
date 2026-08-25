@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../environments/environment';
 import {
@@ -65,9 +65,25 @@ export class TrafficService {
     return this.http.get<ViolationType[]>(`${API}/violation-types`);
   }
 
-  // Open data — javno dostupno bez prijave.
-  getViolationStats() {
-    return this.http.get<ViolationStat[]>(`${API}/open-data/violation-stats`);
+  // Open data — javno dostupno bez prijave. from/to su opcioni datumi (GGGG-MM-DD)
+  // koji filtriraju statistiku po datumu prekršaja.
+  getViolationStats(from?: string, to?: string) {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<ViolationStat[]>(`${API}/open-data/violation-stats`, { params });
+  }
+}
+
+@Injectable({ providedIn: 'root' })
+export class CitizenService {
+  constructor(private http: HttpClient) {}
+
+  // Pretraga po JMBG-u — koristi je policajac pri evidentiranju vozača,
+  // umesto ručnog unosa internog ID-ja iz baze.
+  searchByJmbg(jmbg: string) {
+    const params = new HttpParams().set('jmbg', jmbg);
+    return this.http.get<User>(`${API}/citizens/search`, { params });
   }
 }
 

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"euprava/traffic-police/internal/model"
 )
@@ -28,7 +29,8 @@ type ViolationRepository interface {
 	List(ctx context.Context) ([]model.Violation, error)
 	Update(ctx context.Context, v *model.Violation) error
 	Delete(ctx context.Context, id int64) error
-	Stats(ctx context.Context) ([]model.ViolationStat, error)
+	// Stats vraća statistiku po tipu prekršaja; from/to (opciono) filtriraju po datumu prekršaja.
+	Stats(ctx context.Context, from, to *time.Time) ([]model.ViolationStat, error)
 }
 
 type FineRepository interface {

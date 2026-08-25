@@ -20,6 +20,12 @@ func (s *CitizenService) GetByID(ctx context.Context, id int64) (*model.User, er
 	return s.users.GetByID(ctx, id)
 }
 
+// SearchByJMBG pronalazi građanina po JMBG-u — koristi ga policajac pri
+// evidentiranju vozača umesto unosa internog ID-ja iz baze.
+func (s *CitizenService) SearchByJMBG(ctx context.Context, jmbg string) (*model.User, error) {
+	return s.users.GetByJMBG(ctx, jmbg)
+}
+
 // ListUsers vraća sve korisnike sistema (koristi ga administrator).
 func (s *CitizenService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return s.users.List(ctx)

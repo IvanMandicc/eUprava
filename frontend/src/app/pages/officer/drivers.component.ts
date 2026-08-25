@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TrafficService } from '../../core/api.services';
-import { Driver, DriverDetails, Violation, ViolationType } from '../../models';
+import { CitizenService, TrafficService } from '../../core/api.services';
+import { Driver, DriverDetails, User, Violation, ViolationType } from '../../models';
 
 @Component({
   selector: 'app-drivers',
@@ -13,13 +13,28 @@ import { Driver, DriverDetails, Violation, ViolationType } from '../../models';
 
     <div class="card">
       <h3>Novi vozač</h3>
-      <form class="inline-form" (ngSubmit)="createDriver()">
-        <input type="number" name="citizenId" [(ngModel)]="newCitizenId" placeholder="ID građanina" required />
-        <input name="licenseNumber" [(ngModel)]="newLicenseNumber" placeholder="Broj vozačke dozvole" required />
-        <button type="submit">Evidentiraj</button>
+      <p class="hint">Pronađi građanina po JMBG-u, pa ga evidentiraj kao vozača.</p>
+
+      <form class="inline-form" (ngSubmit)="searchCitizen()">
+        <input name="jmbg" [(ngModel)]="searchJmbg" placeholder="JMBG građanina (13 cifara)" required minlength="13" maxlength="13" />
+        <button type="submit">Pretraži</button>
       </form>
-      @if (createError) {
-        <p class="error">{{ createError }}</p>
+      @if (searchError) {
+        <p class="error">{{ searchError }}</p>
+      }
+
+      @if (foundCitizen) {
+        <p class="hint">
+          Pronađen: <strong>{{ foundCitizen.firstName }} {{ foundCitizen.lastName }}</strong>
+          ({{ foundCitizen.email }}, uloga: {{ foundCitizen.role }})
+        </p>
+        <form class="inline-form" (ngSubmit)="createDriver()">
+          <input name="licenseNumber" [(ngModel)]="newLicenseNumber" placeholder="Broj vozačke dozvole" required />
+          <button type="submit">Evidentiraj kao vozača</button>
+        </form>
+        @if (createError) {
+          <p class="error">{{ createError }}</p>
+        }
       }
     </div>
 
@@ -105,14 +120,16 @@ export class DriversComponent implements OnInit {
   violations: Violation[] = [];
   types: ViolationType[] = [];
 
-  newCitizenId: number | null = null;
+  searchJmbg = '';
+  foundCitizen: User | null = null;
+  searchError = '';
   newLicenseNumber = '';
   createError = '';
 
   newViolation = { type: '', location: '', description: '' };
   violationError = '';
 
-  constructor(private traffic: TrafficService) {}
+  constructor(private traffic: TrafficService, private citizens: CitizenService) {}
 
   ngOnInit(): void {
     this.loadDrivers();
@@ -123,12 +140,22 @@ export class DriversComponent implements OnInit {
     this.traffic.getDrivers().subscribe((d) => (this.drivers = d));
   }
 
+  searchCitizen(): void {
+    this.searchError = '';
+    this.foundCitizen = null;
+    this.citizens.searchByJmbg(this.searchJmbg).subscribe({
+      next: (u) => (this.foundCitizen = u),
+      error: (err) => (this.searchError = err.error?.error ?? 'Građanin nije pronađen.'),
+    });
+  }
+
   createDriver(): void {
-    if (!this.newCitizenId || !this.newLicenseNumber) return;
+    if (!this.foundCitizen || !this.newLicenseNumber) return;
     this.createError = '';
-    this.traffic.createDriver(this.newCitizenId, this.newLicenseNumber).subscribe({
+    this.traffic.createDriver(this.foundCitizen.id, this.newLicenseNumber).subscribe({
       next: () => {
-        this.newCitizenId = null;
+        this.foundCitizen = null;
+        this.searchJmbg = '';
         this.newLicenseNumber = '';
         this.loadDrivers();
       },

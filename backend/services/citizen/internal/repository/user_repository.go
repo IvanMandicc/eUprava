@@ -16,5 +16,6 @@ type UserRepository interface {
 	Create(ctx context.Context, u *model.User) error
 	GetByID(ctx context.Context, id int64) (*model.User, error)
 	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByJMBG(ctx context.Context, jmbg string) (*model.User, error)
 	List(ctx context.Context) ([]model.User, error)
 }

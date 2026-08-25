@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { NotificationService } from '../../core/api.services';
+import { NotificationBadgeService } from '../../core/notification-badge.service';
 import { AppNotification } from '../../models';
 
 @Component({
@@ -30,17 +31,23 @@ import { AppNotification } from '../../models';
 export class NotificationsComponent implements OnInit {
   notifications: AppNotification[] = [];
 
-  constructor(private service: NotificationService) {}
+  constructor(private service: NotificationService, private badge: NotificationBadgeService) {}
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.service.list().subscribe((n) => (this.notifications = n));
+    this.service.list().subscribe((n) => {
+      this.notifications = n;
+      this.badge.refresh(); // uskladi bedž u navbaru sa učitanom listom
+    });
   }
 
   markRead(n: AppNotification): void {
-    this.service.markRead(n.id).subscribe(() => (n.read = true));
+    this.service.markRead(n.id).subscribe(() => {
+      n.read = true;
+      this.badge.refresh(); // bedž se odmah smanjuje, ne čeka sledeći ciklus
+    });
   }
 }
