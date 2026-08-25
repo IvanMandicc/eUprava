@@ -16,7 +16,28 @@ import { Driver, DriverDetails, User, Violation, ViolationType } from '../../mod
       <p class="hint">Pronađi građanina po JMBG-u, pa ga evidentiraj kao vozača.</p>
 
       <form class="inline-form" (ngSubmit)="searchCitizen()">
-        <input name="jmbg" [(ngModel)]="searchJmbg" placeholder="JMBG građanina (13 cifara)" required minlength="13" maxlength="13" />
+        <div class="autocomplete-wrapper">
+          <input
+            name="jmbg"
+            [ngModel]="searchJmbg"
+            (ngModelChange)="onJmbgInput($event)"
+            (blur)="hideSuggestionsSoon()"
+            placeholder="JMBG građanina (kucaj — predlozi se pojavljuju usput)"
+            autocomplete="off"
+            required
+            minlength="13"
+            maxlength="13"
+          />
+          @if (suggestions.length > 0) {
+            <ul class="autocomplete-list">
+              @for (u of suggestions; track u.id) {
+                <li (mousedown)="pickSuggestion(u)">
+                  <strong>{{ u.jmbg }}</strong> — {{ u.firstName }} {{ u.lastName }} ({{ u.email }})
+                </li>
+              }
+            </ul>
+          }
+        </div>
         <button type="submit">Pretraži</button>
       </form>
       @if (searchError) {
@@ -35,6 +56,32 @@ import { Driver, DriverDetails, User, Violation, ViolationType } from '../../mod
         @if (createError) {
           <p class="error">{{ createError }}</p>
         }
+      }
+    </div>
+
+    <div class="card">
+      <h3>Prekršaj po tablici (kamera)</h3>
+      <p class="hint">
+        Za prekršaje koje snimi kamera (npr. radar) — zna se samo registarska
+        tablica, ne i vozač. Vlasnik se pronalazi preko MUP-vozila servisa.
+      </p>
+      <form class="inline-form" (ngSubmit)="createViolationByPlate()">
+        <input name="plateNumber" [(ngModel)]="newPlateViolation.plateNumber" placeholder="Registarska tablica (npr. NI-897-MH)" required />
+        <select name="plateType" [(ngModel)]="newPlateViolation.type" required>
+          <option value="" disabled>Tip prekršaja</option>
+          @for (t of types; track t.code) {
+            <option [value]="t.code">{{ t.label }} ({{ t.points }} poena, {{ t.fine }} RSD)</option>
+          }
+        </select>
+        <input name="plateLocation" [(ngModel)]="newPlateViolation.location" placeholder="Mesto" required />
+        <input name="plateDescription" [(ngModel)]="newPlateViolation.description" placeholder="Opis (npr. izmerena brzina)" />
+        <button type="submit">Evidentiraj prekršaj</button>
+      </form>
+      @if (plateViolationError) {
+        <p class="error">{{ plateViolationError }}</p>
+      }
+      @if (plateViolationSuccess) {
+        <p class="hint">{{ plateViolationSuccess }}</p>
       }
     </div>
 
@@ -126,8 +173,15 @@ export class DriversComponent implements OnInit {
   newLicenseNumber = '';
   createError = '';
 
+  suggestions: User[] = [];
+  private suggestTimer?: ReturnType<typeof setTimeout>;
+
   newViolation = { type: '', location: '', description: '' };
   violationError = '';
+
+  newPlateViolation = { plateNumber: '', type: '', location: '', description: '' };
+  plateViolationError = '';
+  plateViolationSuccess = '';
 
   constructor(private traffic: TrafficService, private citizens: CitizenService) {}
 
@@ -149,6 +203,38 @@ export class DriversComponent implements OnInit {
     });
   }
 
+  // Autocomplete: dok policajac kuca, sa malim zakašnjenjem (debounce) šalje
+  // se zahtev za predlozima — ne na svaki taster, već tek kad kucanje stane.
+  onJmbgInput(value: string): void {
+    this.searchJmbg = value;
+    this.foundCitizen = null;
+    this.searchError = '';
+    clearTimeout(this.suggestTimer);
+    if (value.length < 3) {
+      this.suggestions = [];
+      return;
+    }
+    this.suggestTimer = setTimeout(() => {
+      this.citizens.suggestByJmbg(value).subscribe({
+        next: (list) => (this.suggestions = list),
+        error: () => (this.suggestions = []),
+      });
+    }, 300);
+  }
+
+  pickSuggestion(u: User): void {
+    this.foundCitizen = u;
+    this.searchJmbg = u.jmbg;
+    this.suggestions = [];
+  }
+
+  // mousedown na stavci liste izvrši pickSuggestion PRE nego što input
+  // izgubi fokus (blur) — zato ovde samo sakrivamo listu sa malim kašnjenjem,
+  // da klik stigne da se registruje.
+  hideSuggestionsSoon(): void {
+    setTimeout(() => (this.suggestions = []), 150);
+  }
+
   createDriver(): void {
     if (!this.foundCitizen || !this.newLicenseNumber) return;
     this.createError = '';
@@ -160,6 +246,20 @@ export class DriversComponent implements OnInit {
         this.loadDrivers();
       },
       error: (err) => (this.createError = err.error?.error ?? 'Evidentiranje vozača nije uspelo.'),
+    });
+  }
+
+  createViolationByPlate(): void {
+    if (!this.newPlateViolation.plateNumber || !this.newPlateViolation.type) return;
+    this.plateViolationError = '';
+    this.plateViolationSuccess = '';
+    this.traffic.createViolationByPlate(this.newPlateViolation).subscribe({
+      next: (v) => {
+        this.plateViolationSuccess = `Prekršaj evidentiran (vozač #${v.driverId}, ${v.points} poena).`;
+        this.newPlateViolation = { plateNumber: '', type: '', location: '', description: '' };
+        this.loadDrivers();
+      },
+      error: (err) => (this.plateViolationError = err.error?.error ?? 'Unos prekršaja po tablici nije uspeo.'),
     });
   }
 

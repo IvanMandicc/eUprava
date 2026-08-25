@@ -52,6 +52,11 @@ export class TrafficService {
   createViolation(input: { driverId: number; type: string; description: string; location: string }) {
     return this.http.post<Violation>(`${API}/violations`, input);
   }
+  // Prekršaj snimljen kamerom — zna se samo tablica, ne i vozač. Traffic
+  // Police pita Vehicles servis ko je vlasnik (drugi smer komunikacije).
+  createViolationByPlate(input: { plateNumber: string; type: string; description: string; location: string }) {
+    return this.http.post<Violation>(`${API}/violations/by-plate`, input);
+  }
   updateViolation(id: number, input: { description?: string; location?: string; status?: string }) {
     return this.http.put<Violation>(`${API}/violations/${id}`, input);
   }
@@ -84,6 +89,12 @@ export class CitizenService {
   searchByJmbg(jmbg: string) {
     const params = new HttpParams().set('jmbg', jmbg);
     return this.http.get<User>(`${API}/citizens/search`, { params });
+  }
+
+  // Autocomplete — predlozi dok se kuca JMBG (bar 3 cifre), bez čekanja na ceo broj.
+  suggestByJmbg(prefix: string) {
+    const params = new HttpParams().set('jmbg', prefix);
+    return this.http.get<User[]>(`${API}/citizens/suggest`, { params });
   }
 }
 

@@ -156,6 +156,44 @@ select {
   min-width: 160px;
 }
 
+/* ---------- Autocomplete (predlozi dok se kuca) ---------- */
+.autocomplete-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+}
+
+.autocomplete-wrapper input {
+  width: 100%;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(16, 30, 54, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.autocomplete-list li {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.autocomplete-list li:hover {
+  background: #f1f4f8;
+}
+
 button {
   margin-top: 12px;
   padding: 9px 18px;
