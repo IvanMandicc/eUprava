@@ -1,7 +1,8 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { RegisterVehicleInput, vehiclesApi } from '../../api/vehicles';
+import { citizensApi } from '../../api/citizens';
 import { ApiError } from '../../api/client';
-import { Vehicle } from '../../types';
+import { User, Vehicle } from '../../types';
 
 const emptyInput: RegisterVehicleInput = {
   ownerCitizenId: 0,
@@ -25,6 +26,12 @@ export function VehiclesPage() {
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  const [searchJmbg, setSearchJmbg] = useState('');
+  const [foundCitizen, setFoundCitizen] = useState<User | null>(null);
+  const [searchError, setSearchError] = useState('');
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout>>();
+
   function load() {
     vehiclesApi
       .list()
@@ -36,6 +43,52 @@ export function VehiclesPage() {
 
   function set<K extends keyof RegisterVehicleInput>(key: K, value: RegisterVehicleInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function searchCitizen(e: FormEvent) {
+    e.preventDefault();
+    setSearchError('');
+    setFoundCitizen(null);
+    citizensApi
+      .searchByJmbg(searchJmbg)
+      .then((u) => {
+        setFoundCitizen(u);
+        set('ownerCitizenId', u.id);
+      })
+      .catch((err) => setSearchError(err instanceof ApiError ? err.message : 'Građanin nije pronađen.'));
+  }
+
+  // Autocomplete: dok policajac kuca, sa malim zakašnjenjem (debounce) šalje
+  // se zahtev za predlozima — ne na svaki taster, već tek kad kucanje stane.
+  function onJmbgInput(value: string) {
+    setSearchJmbg(value);
+    setFoundCitizen(null);
+    setSearchError('');
+    clearTimeout(suggestTimer.current);
+    if (value.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    suggestTimer.current = setTimeout(() => {
+      citizensApi
+        .suggestByJmbg(value)
+        .then(setSuggestions)
+        .catch(() => setSuggestions([]));
+    }, 300);
+  }
+
+  function pickSuggestion(u: User) {
+    setFoundCitizen(u);
+    setSearchJmbg(u.jmbg);
+    set('ownerCitizenId', u.id);
+    setSuggestions([]);
+  }
+
+  // mousedown na stavci liste izvrši pickSuggestion PRE nego što input
+  // izgubi fokus (blur) — zato ovde samo sakrivamo listu sa malim kašnjenjem,
+  // da klik stigne da se registruje.
+  function hideSuggestionsSoon() {
+    setTimeout(() => setSuggestions([]), 150);
   }
 
   async function submit(e: FormEvent) {
@@ -89,6 +142,39 @@ export function VehiclesPage() {
     <>
       <div className="card">
         <h2>Registracija vozila</h2>
+
+        <p className="hint">Pronađi vlasnika po JMBG-u, pa registruj vozilo na njegovo ime.</p>
+        <form className="inline-form" onSubmit={searchCitizen}>
+          <div className="autocomplete-wrapper">
+            <input
+              value={searchJmbg}
+              onChange={(e) => onJmbgInput(e.target.value)}
+              onBlur={hideSuggestionsSoon}
+              placeholder="JMBG građanina (kucaj — predlozi se pojavljuju usput)"
+              autoComplete="off"
+              required
+              minLength={13}
+              maxLength={13}
+            />
+            {suggestions.length > 0 && (
+              <ul className="autocomplete-list">
+                {suggestions.map((u) => (
+                  <li key={u.id} onMouseDown={() => pickSuggestion(u)}>
+                    <strong>{u.jmbg}</strong> — {u.firstName} {u.lastName} ({u.email})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button type="submit">Pretraži</button>
+        </form>
+        {searchError && <p className="error">{searchError}</p>}
+        {foundCitizen && (
+          <p className="hint">
+            Pronađen: <strong>{foundCitizen.firstName} {foundCitizen.lastName}</strong> ({foundCitizen.email})
+          </p>
+        )}
+
         <form onSubmit={submit}>
           <label>ID građanina (vlasnik)</label>
           <input
